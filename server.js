@@ -13,6 +13,8 @@ const Product = require("./models/Products");
 // Routes import
 const userRouter = require("./routes/userRouter");
 const productRouter = require("./routes/productRouter");
+const Cart = require("./models/Cart");
+const CartItem = require("./models/CartItem");
 
 // Middleware
 app.use(express.json());
@@ -27,16 +29,21 @@ app.use("/products", productRouter);
 Product.belongsTo(User, { constraints: true, onDelete: "CASCADE" });
 User.hasMany(Product);
 
+User.hasOne(Cart);
+Cart.belongsTo(User);
+
+Cart.belongsToMany(Product, { through: CartItem });
+Product.belongsToMany(Cart, { through: CartItem });
+
 sequelize
   .sync({ force: true })
   .then(async (res) => {
     console.log("Connection has been established successfully.");
     if ((await User.findAll()).length === 0)
-      await User.findOrCreate({ where: { username: "Ghaieth" } });
-    // console.log(res);
-
-    app.listen(9000, () => {
-      console.log("App listening on port 9000!");
-    });
+      return await User.findOrCreate({ where: { username: "Ghaieth" } });
   })
+  .then(([user]) => user.createCart({}))
+  .then(() =>
+    app.listen(9000, () => console.log("App listening on port 9000!"))
+  )
   .catch((err) => console.log(err));
